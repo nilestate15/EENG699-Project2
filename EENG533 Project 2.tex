@@ -1,0 +1,228 @@
+\documentclass[12pt]{article}
+
+\usepackage[
+   paperheight = 11in,
+   paperwidth = 8.5in,
+   margin = 1in,
+   footskip = 0.45in] {geometry} %  custom paper size and margins
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{adjustbox}
+\usepackage{color} %  custom colors
+\usepackage{multicol}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{hhline}
+\usepackage{titlesec}
+\usepackage{hyphenat}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{listings, upquote, textcomp} %  "\lstinline{ }" for inline code
+\usepackage[
+   colorlinks = true,
+   linkcolor = darkblue,
+   urlcolor = darkblue,
+   hypertexnames = false]{hyperref}
+
+\setlength{\tabcolsep}{10pt}
+\def\arraystretch{1.2}
+\definecolor{gray}         {rgb}{0.50,0.50,0.50}
+\definecolor{darkblue}     {rgb}{0.00,0.00,0.50}
+\renewcommand{\labelenumi}{\arabic{enumi}.}
+\renewcommand{\labelenumii}{\alph{enumii}.}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{10pt plus 2pt minus 2pt}
+\titlespacing\section{0pt}{10pt plus 2pt minus 2pt}{0pt plus 2pt minus 2pt}
+\raggedbottom
+\newcolumntype{L}[1]{>{
+   \raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{C}[1]{>{
+   \centering\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{R}[1]{>{
+   \raggedleft\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\lstdefinestyle{lstMat} {
+   language = matlab,
+   backgroundcolor = {},
+   breakatwhitespace = true,
+   breaklines = true,
+   postbreak = \space,
+   breakindent = 4ex,
+   showstringspaces = false,
+   basicstyle = \footnotesize\ttfamily,
+   commentstyle = \color{gray},
+   stringstyle = \color{red},
+   keywordstyle = \color{blue},
+   tabsize = 3,
+   upquote = true}
+\lstset{style = lstMat} %  Default syntax.
+
+\begin{document}
+%  Header
+\begin{minipage}{0.9\textwidth}
+   \raggedright
+   \large \textbf{\textsf{{\color{gray}EENG 533: Navigation Using GPS} \\
+      Project 2: Calculating GPS Satellite Position}}
+\end{minipage}
+\vspace{1cm}
+
+\section*{\textsf{Objectives}}
+
+\begin{enumerate}
+   \item Become more familiar with Python programming and explore the 
+            \href{https://pypi.org/project/georinex/}{georinex} RINEX file processing library.
+   \item Develop a routine to determine satellite position, which will be used
+      throughout the rest of the course.
+   \item Develop a better understanding of coordinate frames and timing
+      issues.
+\end{enumerate}
+
+\section*{\textsf{Overview}}
+
+You will be calculating satellite positions using broadcast ephemeris data
+from \href{https://en.wikipedia.org/wiki/RINEX}{RINEX} (Receiver Independent Exchange Format) 
+file throughout this course, and the purpose of this lab is to develop a tool, a Python function, 
+for doing this.  You will write a Python function which can be
+called to calculate the coordinates of the satellite for use in positioning
+applications.  It will also calculate the satellite clock error, which will be
+needed in future labs.  The equations needed are found on pp. 95-96, and 102-103 of
+document \href{https://www.gps.gov/technical/icwg/IS-GPS-200L.pdf}{IS-GPS-200L}.
+
+\section*{\textsf{Collaboration}}
+
+This is an individual lab.   You are allowed to discuss any aspect of the lab
+with other students, and you may look at each other's source code for debugging
+purposes.  However, your programming must be your own; you may not copy or
+transcribe someone else's program, in part or in whole.
+
+\section*{\textsf{Satellite Position Function Description}}
+
+Your assignment is to write the following MATLAB function
+
+% \begin{lstlisting}[style = lstMat]
+\begin{lstlisting}[language = Python]
+import math
+import numpy as np
+
+
+def calc_sv_pos(eph, tow, rcvr_ecef):
+    """
+    Satellite position and satellite clock correction calculation based on IS-GPS-200L (Table 20-IV and pp. 95-96).
+    The satellite position is for a particular GPS time, expressed in the ECEF coordinate frame valid at the time the signal was received by a GPS receiver.
+
+    :param eph:              ephemeris object (from georinex) for a single satellite and time epoch
+    :param tow:              time of transmission [GPS week sec]
+    :param rcvr_ecef:        1x3 numpy array of ECEF receiver position [x y z in meters]
+
+    :return sv_ecef:         1x3 numpy array of ECEF satellite position [x y z in meters] at time of transmission, expressed in ECEF frame at the time of reception
+    :return sv_clock_error:  satellite clock error [sec] at time of transmission
+    """
+    # <<<your code here>>>
+
+     return sv_ecef, sv_clock_error
+\end{lstlisting}
+
+%\noindent If you copy the source as given directly above, then you will have a
+%useful output when you type \lstinline{help calc_sv_pos} in MATLAB.
+
+The algorithms for calculating the ECEF satellite position are provided in
+IS-GPS-200L (Table 20-IV), which can be obtained from \href{https://www.gps.gov/technical/icwg/IS-GPS-200L.pdf}{this link}.
+In addition, you should reference the class slide handouts
+to get additional information that you will need to complete this lab.  Note
+that the coordinates calculated by the equations in IS-GPS-200L ($x_k$, $y_k$,
+and $z_k$) are the ECEF coordinates of the satellite at the time of transmission
+(shown as $x_t$, $y_t$, and $z_t$ in the slide titled ``Coordinate Frame
+Rotation'' in the fourth video).  You will need to perform the rotation to
+express them as the ECEF coordinates at the time of reception ($x_r$, $y_r$, and
+$z_r$).
+
+The algorithms for calculating the SV clock correction ($\Delta t_{sv}$) are
+found in the IS-GPS-200L section entitled ``User Algorithm for SV Clock
+Correction'' (pp. 95-96).  Note that you need the eccentric anomaly (an intermediate
+calculation when calculating the position) in order to do this.  This SV clock
+correction represents a significant error that needs to be removed if anything
+useful is done with GPS measurements.
+
+\section*{\textsf{Obtaining the Ephemeris Data}}
+
+The raw ephemeris data is in a provided text file called \texttt{ohdt3490.20n}.  
+%The MATLAB function \texttt{load\_eph\_file} will read all the data from the
+%\texttt{.eph} file into a global variable.  The MATLAB function
+%\texttt{current\_ephemeris} will select the data of a particular satellite,
+%identified by its PRN number.
+
+%The idea is that before you run your MATLAB program, you call
+%\texttt{load\_eph\_file} once from the command window.  Then, each time you need
+%an ephemeris, you retrieve the appropriate ephemeris record using the
+%\texttt{current\_ephemeris} function from within your \texttt{calc\_sv\_pos}.
+%Use the help function for more information about these functions.
+
+The georinex library and functions in the provided \texttt{helper.py} file will perform the work needed
+to isolate the correct ephemeris record from the RINEX nav file.  The provided
+\texttt{project2\_template.py} file contains an example for a specific PRN and transmission time.
+
+The georinex library needs to be added to your Anaconda environment.  Unfortunately, it is not
+contained in the Anaconda repository so you will need to choose the ``CMD.exe Prompt" (or similar
+depending on your operating system) application and type \texttt{pip install georinex} at the 
+prompt.  It may take a few minutes to install.  Typing \texttt{pip list} will show all the installed libraries in your environment 
+and georinex should now be listed.
+
+The \texttt{ephem} object created near the end of \texttt{project2\_template.py} from the class definition 
+in \texttt{ephemeris.py} will contain the ephemeris values for the chosen satellite 
+and for the time closest to the \texttt{tow} specified.  When implementing the equations in your
+function to calculate satellite position and clock error, the ephemeris values can be accessed as
+\texttt{eph.M\_0}, \texttt{eph.e}, etc.  The full listing of parameters is shown in \texttt{ephemeris.py}.
+
+
+
+\section*{\textsf{Checking Your Work}}
+
+Below is a sample run from a satellite positioning algorithm that you can use to
+check your work.
+
+\begin{verbatim}
+   Filename       : ohdt3490.20n
+   PRN            : G03
+   Transmit Time  : 80000.000
+   Rcvr Position  : -1485881.487 -5152018.353 3444641.847 (meters)
+   SV Position    : -12334966.483 -22955725.027 -5479289.332 (meters)
+   SV Clock Error : -0.0000290720 (seconds)
+\end{verbatim}
+
+Hint: Here is a sample command that would generate some of the above printout.
+You should not have this in your function, but you could use something like it
+in a test program which would call your function.
+\begin{lstlisting}[language = Python]
+    print("SV Position    : %.3f %.3f %.3f (meters)" % (sv_ecef[0], sv_ecef[1], sv_ecef[2]))
+\end{lstlisting}
+
+\section*{\textsf{Deliverables}}
+
+For this project, please submit your function as a \texttt{.py} file in Canvas.
+Please name it
+\begin{verbatim}
+   calc_sv_pos_<lastname>.py
+\end{verbatim}
+where \texttt{<lastname>} is your last name in lower case.  If John Smith were
+turning in the lab, the filename would be \texttt{calc\_sv\_pos\_smith.py}.
+
+Note that I only want your function so that I can call it myself, not a program
+that will generate an output similar to that shown in the ``Checking Your Work''
+section above.  In fact, your function should not print out anything at all: it
+should just return the output vectors.
+
+\section*{\textsf{Grading}}
+
+You will be graded primarily upon accuracy.  If you get the correct positions
+for satellites and times that I pick when I run your function, then you will get
+full credit for the lab.  I will try several different PRNs at different times.
+If you do not get the correct answers, then I will look at your source code and
+make a judgment on your grade based on what I see.  Feel free to include any
+comments that you would like in Canvas.  Also, make sure that your function
+works with a 1-by-3 \texttt{rcvr\_ecef} vector and returns a 1-by-3
+\texttt{sv\_ecef} vector.  Points will be deducted if either of these is wrong.
+Also, make sure that your function can handle end of week rollover (as described
+in the IS-GPS-200L) for both the satellite position and clock error
+calculations.  Failure to do so will result in points being deducted for each
+case in which the error is made (position and clock error).
+
+\end{document}
