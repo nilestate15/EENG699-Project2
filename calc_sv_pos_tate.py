@@ -43,7 +43,7 @@ def calc_sv_pos(eph, tow, rcvr_ecef):
     n_0 = math.sqrt(MU / (A ** 3))
     n = n_0 + eph.delta_n
 
-    # time since ephemeris reference epoch, corrected for week rollovers [sec]
+    # time since ephemeris reference epoch, corrected for week rollovers (86,400 day) t_k = t-t0 [sec]
     t_k = tow - eph.t_oe
     if t_k > 302400:
         t_k = t_k - 604800
@@ -55,6 +55,8 @@ def calc_sv_pos(eph, tow, rcvr_ecef):
 
     # eccentric anomaly (solve Kepler's equation by RCVR-3A iteration) [rad]
     E_k = M_k + eph.e * math.sin(M_k)
+
+    # 2 iterations
     E_k = (eph.e * (math.sin(E_k) - E_k * math.cos(E_k)) + M_k) / (1 - eph.e * math.cos(E_k))
     E_k = (eph.e * (math.sin(E_k) - E_k * math.cos(E_k)) + M_k) / (1 - eph.e * math.cos(E_k))
 
@@ -63,36 +65,36 @@ def calc_sv_pos(eph, tow, rcvr_ecef):
     cos_nu = (math.cos(E_k) - eph.e) / (1 - eph.e * math.cos(E_k))
     nu_k = math.atan2(sin_nu, cos_nu)
 
-    # uncorrected argument of latitude [rad]
+    # uncorrected argument of latitude [rad] (pg 103 GPS-200L)
     Phi_k = nu_k + eph.omega
 
-    # second harmonic corrections
+    # second harmonic corrections (pg 103 GPS-200L)
     del_u_k = eph.C_us * math.sin(2 * Phi_k) + eph.C_uc * math.cos(2 * Phi_k)
     del_r_k = eph.C_rs * math.sin(2 * Phi_k) + eph.C_rc * math.cos(2 * Phi_k)
     del_i_k = eph.C_is * math.sin(2 * Phi_k) + eph.C_ic * math.cos(2 * Phi_k)
 
-    # corrected argument of latitude [rad]
+    # corrected argument of latitude [rad] (pg 103 GPS-200L)
     u_k = Phi_k + del_u_k
 
-    # corrected radius [m]
+    # corrected radius [m] (pg 103 GPS-200L)
     r_k = A * (1 - eph.e * math.cos(E_k)) + del_r_k
 
-    # corrected inclination [rad]
+    # corrected inclination [rad] (pg 103 GPS-200L)
     i_k = eph.i_0 + del_i_k + eph.i_dot * t_k
 
-    # position in orbital plane [m]
+    # position in orbital plane [m] (pg 103 GPS-200L)
     x_k_p = r_k * math.cos(u_k)
     y_k_p = r_k * math.sin(u_k)
 
-    # corrected longitude of ascending node
+    # corrected longitude of ascending node (pg 103 GPS-200L)
     Omega_k = eph.Omega_0 + (eph.Omega_dot - OMEGA_DOT_E) * t_k - OMEGA_DOT_E * eph.t_oe
 
-    # position at transmit time relative to the ECEF frame at TRANSMIT time [m]
+    # position at transmit time relative to the ECEF frame at TRANSMIT time [m] (pg 104 GPS-200L)
     x_k = x_k_p * math.cos(Omega_k) - y_k_p*math.cos(i_k) * math.sin(Omega_k)
     y_k = x_k_p * math.sin(Omega_k) + y_k_p * math.cos(i_k) * math.cos(Omega_k)
     z_k = y_k_p * math.sin(i_k)
 
-    # approximate propagation time and ECEF frame rotation angle
+    # approximate propagation time and ECEF frame rotation angle (M2-4)
     sat_pos_tx = np.array([x_k, y_k, z_k])
     t_prop = np.linalg.norm(sat_pos_tx - rcvr_ecef) / C
     gamma = OMEGA_DOT_E * t_prop
